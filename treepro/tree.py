@@ -23,18 +23,26 @@ def collect_items(directory, base_dir, spec, depth=0, counter=None):
         return items
 
     for entry in entries:
+        # Skip files and directories starting with a dot
+        if entry.startswith("."):
+            continue
+        
         full_path = os.path.join(directory, entry)
         rel_path = os.path.relpath(full_path, base_dir)
         check_path = rel_path + "/" if os.path.isdir(full_path) else rel_path
         if spec and (spec.match_file(rel_path) or spec.match_file(check_path)):
             continue
+
         num = counter[0]
         counter[0] += 1
         items[num] = {"path": full_path, "is_dir": os.path.isdir(full_path), "depth": depth}
+
         if os.path.isdir(full_path):
             child_items = collect_items(full_path, base_dir, spec, depth=depth+1, counter=counter)
             items.update(child_items)
+
     return items
+
 
 def get_all_items(directory="."):
     spec = load_gitignore(directory)
@@ -57,27 +65,34 @@ def gather_selected_files(items, selected_numbers):
 
 def get_project_structure_tree(directory):
     spec = load_gitignore(directory)
-    root = Tree(os.path.basename(os.path.abspath(directory)))  # Replace "." with actual directory name
+    root = Tree(os.path.basename(os.path.abspath(directory)))  # Root directory name
 
     def add_nodes(parent_node, current_dir):
         try:
             entries = sorted(os.listdir(current_dir))
         except PermissionError:
             return
+        
         for entry in entries:
+            # Exclude hidden/system files and directories
+            if entry.startswith(".") or entry in {"dist", "build", "__pycache__"}:
+                continue
+
             full_path = os.path.join(current_dir, entry)
             rel_path = os.path.relpath(full_path, directory)
             check_path = rel_path + "/" if os.path.isdir(full_path) else rel_path
             if spec and (spec.match_file(rel_path) or spec.match_file(check_path)):
                 continue
+
             if os.path.isdir(full_path):
                 branch = parent_node.add(f"{entry}/")
                 add_nodes(branch, full_path)
             else:
                 parent_node.add(entry)
-    
+
     add_nodes(root, directory)
     return root
+
 
 
 def get_full_project_tree_text(directory):
