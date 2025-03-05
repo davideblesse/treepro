@@ -1,0 +1,84 @@
+# Byte-compiled / cached
+__pycache__/
+*.py[cod]
+*.so
+*.pyo
+*.pyd
+*.swp
+*.swo
+
+# Logs and crash reports
+*.log
+*.out
+*.err
+*.trace
+
+# Virtual environments
+venv/
+.env/
+.llmtree_env/  # Custom name if using a project-specific virtual env
+
+# Conda environment files (if applicable)
+env/
+*.conda
+*.yaml
+*.yml
+
+# Packaging and distribution
+*.egg-info/
+dist/
+build/
+*.egg
+*.whl
+
+# PyInstaller bundle
+*.spec
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# MacOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows system files
+Thumbs.db
+ehthumbs.db
+$RECYCLE.BIN/
+
+# Linux swap files
+.swap/
+.*~
+
+# Git-related files
+*.orig
+*.rej
+*.patch
+
+# Editor / IDE files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+*.vscode/
+*.swp
+*.swo
+*.bak
+
+# Pycharm specific
+__pycache__/
+*.iml
+.idea/
+*.xml
+
+# Local test and temporary files
+tests/__pycache__/
+.coverage
+*.coverage.*
+nosetests.xml
+pytest_cache/
+.tox/
+.mypy_cache/
+
+llmtree.txt
