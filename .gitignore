@@ -16,7 +16,7 @@ __pycache__/
 # Virtual environments
 venv/
 .env/
-.llmtree_env/  # Custom name if using a project-specific virtual env
+.treepro_env/  # Custom name if using a project-specific virtual env
 
 # Conda environment files (if applicable)
 env/
@@ -61,13 +61,9 @@ $RECYCLE.BIN/
 .idea/
 *.sublime-workspace
 *.sublime-project
-*.vscode/
-*.swp
-*.swo
 *.bak
 
-# Pycharm specific
-__pycache__/
+# PyCharm specific
 *.iml
 .idea/
 *.xml
@@ -81,4 +77,10 @@ pytest_cache/
 .tox/
 .mypy_cache/
 
-llmtree.txt
+# Ignore old project file
+treepro.txt  # (Renamed from llmtree.txt, if still needed)
+
+dist/
+
+dist/
+treepro.txt
