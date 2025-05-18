@@ -12,7 +12,8 @@ setup(
         "click",
         "questionary",
         "pyyaml",
-        "pathspec"
+        "pathspec",
+        "pyperclip"
     ],
     entry_points={
         "console_scripts": [
@@ -20,4 +21,3 @@ setup(
         ]
     },
 )
-
