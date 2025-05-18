@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="treepro",
-    version="0.1.3",
+    version="0.1.4",
     description="An advanced version of the Unix tree command.",
     author="Your Name",
     author_email="your.email@example.com",
