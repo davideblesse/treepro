@@ -1,6 +1,7 @@
 import click
 import questionary
 import os
+import pyperclip
 from .tree import (
     get_all_items,
     gather_selected_files,
@@ -10,51 +11,70 @@ from .tree import (
 )
 
 @click.command()
-@click.argument("directory", default=".", type=click.Path(exists=True, file_okay=False))
+@click.argument(
+    "directory",
+    default=".",
+    # allow directory to be a file name, in this case, we will use the current directory
+    type=click.Path(exists=False, file_okay=False)
+)
 @click.option(
-    "--output", "-o", 
-    type=click.Choice(["text", "json", "yaml"], case_sensitive=False), 
-    default="text", 
+    "--output", "-o",
+    type=click.Choice(["text", "json", "yaml"], case_sensitive=False),
+    default="text",
     help="Output format: text (default), json, or yaml."
 )
 @click.option(
     "-f", "--file",
-    type=click.Path(dir_okay=False, writable=True),
-    default=None,
+    "file_flag",
+    # it is a flag that, if invoked without an argument, defaults to "treepro.txt"
     flag_value="treepro.txt",
-    help=("Save complete output to a file. Use -f alone to use the default filename "
-          "'treepro.txt', or -f <filename.txt> to override the default.")
+    default=None,
+    type=click.Path(dir_okay=False, writable=True),
+    help=(
+        "Save complete output to a file. "
+        "Use `-f` to write in `treepro.txt`, or `-f <filename>` to specify a different name."
+    )
 )
-def treepro(directory, output, file):
+def treepro(directory, output, file_flag):
     """
     Recursively lists all files/folders (ignoring .gitignore) and outputs a structured summary.
-    
-    The output consists of:
-      - PROJECT STRUCTURE (in the chosen format)
-      - A list of SELECTED FILES (via interactive selection)
-      - CONTENT OF SELECTED FILES
     """
-    # Local capture list so that each command run is independent.
-    output_lines = []
-
-    def echo_and_capture(message=""):
-        """Prints a message to the console and saves it for later file output."""
-        click.echo(message)
-        output_lines.append(message)
-
-    # [1] Generate the project structure output in the chosen format.
-    if output == "json":
-        project_structure_text = get_full_project_tree_json(directory)
-    elif output == "yaml":
-        project_structure_text = get_full_project_tree_yaml(directory)
+    # 1) Determine if the 'directory' argument is actually an output filename
+    if file_flag:
+        # if the string 'directory' actually exists as a folder, we use it as the directory:
+        if os.path.isdir(directory):
+            project_dir = directory
+            output_file = file_flag
+        else:
+            # otherwise, treat it as a filename and use the current directory
+            project_dir = "."
+            output_file = directory
     else:
-        project_structure_text = get_full_project_tree_text(directory)
-    
+        # no -f: directory MUST exist
+        if not os.path.isdir(directory):
+            raise click.ClickException(f"Directory '{directory}' does not exist.")
+        project_dir = directory
+        output_file = None
+
+    # buffer to later save/display on screen
+    output_lines = []
+    def echo_and_capture(msg=""):
+        click.echo(msg)
+        output_lines.append(msg)
+        
+    # 2) project structure
+    if output == "json":
+        project_text = get_full_project_tree_json(project_dir)
+    elif output == "yaml":
+        project_text = get_full_project_tree_yaml(project_dir)
+    else:
+        project_text = get_full_project_tree_text(project_dir)
+
     echo_and_capture("PROJECT STRUCTURE :")
-    echo_and_capture(project_structure_text)
+    echo_and_capture(project_text)
     
-    # [2] Interactive selection.
-    items = get_all_items(directory)
+    # 3) interactive selection
+    items = get_all_items(project_dir)
     if not items:
         echo_and_capture("No files found (or all files are ignored).")
         return
@@ -63,46 +83,57 @@ def treepro(directory, output, file):
     for num in sorted(items.keys()):
         item = items[num]
         indent = "    " * item["depth"]
-        base_name = os.path.basename(item["path"])
-        title = f"{num}: {indent}{base_name}" + ("/" if item["is_dir"] else "")
+        name = os.path.basename(item["path"])
+        title = f"{num}: {indent}{name}" + ("/" if item["is_dir"] else "")
         choices.append(questionary.Choice(title=title, value=num))
-    
-    selected_numbers = questionary.checkbox(
-        "Select items (use space to toggle selection):",
+
+    selected = questionary.checkbox(
+        "Select items (use space to toggle):",
         choices=choices
     ).ask()
-
-    if not selected_numbers:
+    if not selected:
         echo_and_capture("No items selected.")
         return
 
-    # [3] Compute the selected files.
-    selected_files = gather_selected_files(items, selected_numbers)
-
+    selected_files = gather_selected_files(items, selected)
     echo_and_capture("\nSELECTED FILES:")
-    for file_path in sorted(selected_files):
-        rel_path = os.path.relpath(file_path, directory)
-        echo_and_capture(f"- {rel_path}")
-
-    echo_and_capture("\nCONTENT OF SELECTED FILES:")
-    for file_path in sorted(selected_files):
-        rel_path = os.path.relpath(file_path, directory)
-        echo_and_capture(f"\n--- {rel_path} ---")
+    for p in sorted(selected_files):
+        echo_and_capture(f"- {os.path.relpath(p, project_dir)}")
+        
+    # 4) content of the selected files
+    parts = []
+    for p in sorted(selected_files):
+        rel = os.path.relpath(p, project_dir)
+        parts.append(f"\n--- {rel} ---\n")
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read()
-            echo_and_capture(content)
+            with open(p, "r", encoding="utf-8") as f:
+                parts.append(f.read())
         except Exception as e:
-            echo_and_capture(f"Error reading file {rel_path}: {e}")
+            parts.append(f"Error reading {rel}: {e}")
 
-    # [4] Write complete output to file if -f was provided.
-    if file:
-        # If the file path is relative, place it in the current working directory.
-        if not os.path.isabs(file):
-            file = os.path.join(os.getcwd(), file)
-        with open(file, "w", encoding="utf-8") as f:
-            f.write("\n".join(output_lines))
-        echo_and_capture(f"\nOutput also written to file: {file}")
+    content = "\n".join(parts)
+    
+    # 5) copy to clipboard (include project structure + selected content)
+    try:
+        clipboard_text = "\n".join(output_lines) \
+                       + "\n\nCONTENT OF SELECTED FILES:\n" \
+                       + content
+        pyperclip.copy(clipboard_text)
+        echo_and_capture("\nContents of project structure + selected files copied to clipboard.")
+    except pyperclip.PyperclipException as e:
+        echo_and_capture(f"\nFailed to copy to clipboard: {e}")
+
+        
+    # 6) saving to file (if requested)
+    if output_file:
+        # if it is not an absolute path, we place it in the cwd
+        if not os.path.isabs(output_file):
+            output_file = os.path.join(os.getcwd(), output_file)
+        full = "\n".join(output_lines) + "\n\nCONTENT OF SELECTED FILES:\n" + content
+        with open(output_file, "w", encoding="utf-8") as f:
+            f.write(full)
+        echo_and_capture(f"\nContents of selected files saved to: {output_file}")
+
 
 if __name__ == "__main__":
     treepro()

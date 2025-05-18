@@ -1,3 +1,6 @@
 click
 rich
 pyyaml
+questionary
+pathspec
+pyperclip

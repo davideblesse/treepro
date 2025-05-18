@@ -17,6 +17,7 @@ __pycache__/
 venv/
 .env/
 .treepro_env/  # Custom name if using a project-specific virtual env
+.venv/
 
 # Conda environment files (if applicable)
 env/
