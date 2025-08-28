@@ -13,7 +13,7 @@ setup(
         "questionary",
         "pyyaml",
         "pathspec",
-        "pyperclip"
+        "prompt_toolkit<3.0.47",
     ],
     entry_points={
         "console_scripts": [

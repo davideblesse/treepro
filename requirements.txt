@@ -1,6 +1,6 @@
 click
 rich
 pyyaml
-questionary
 pathspec
-pyperclip
+questionary
+prompt_toolkit<3.0.47
